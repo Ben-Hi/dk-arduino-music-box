@@ -32,7 +32,6 @@ arduinoFFT fft = arduinoFFT();
 #define SD_CHIPSELECT 10 //SS select pin 10 for UNO
 
 #define AUDIO_IN A0 //ADC UNO input
-//#define AUDIO_OUT 5 //PWM recorded audio output
 #define MOTOR 3 //PWM DK motor pin
 #define STOP_PIN 2 //stop button pin
 
@@ -43,7 +42,7 @@ arduinoFFT fft = arduinoFFT();
 #define PLAY_RECORDING_PIN 8
 
 #define maxRecordTime 20000000 //Maximum recording duration in microseconds
-#define numFreq 240 //number of frequencies in the recording array, more = better signal reconstruction, 390
+#define numFreq 240 //number of frequencies in the recording array, more = better signal reconstruction
 #define windowDelay 25682 //time between taking a window, 25682 is the maximum to maintain 0.02 second accuracy
 
 /*                    THE GREAT MEMORY CONUNDRUM
@@ -66,7 +65,12 @@ arduinoFFT fft = arduinoFFT();
 //of reduced resolution. 
 
 //The current array size allows for 19.5 notes to be played per second over 20 seconds.
-//This equates to a maximum error in note duration of 0.02 seconds.
+//This equates to a maximum error in note duration of 0.02 seconds. We have been given
+//permission to have a larger degree of error, so the frequency array has been reduced to
+//240 to prevent instability due to low available memory. However, due to 
+//complications with the audio processing hardware, the signal is corrupted before
+//reaching the input pin, leaving me unable to identify the dominant frequencies.
+//Therefore, the recording feature is unable to function in the current state of the project.
 */
 int rFreq[numFreq]; //holds the recorded dominant frequencies
 
@@ -128,11 +132,8 @@ void loop(){
   //Song 1
   if (digitalRead(SONG1_PIN) == HIGH){
     bool keepPlaying = true;
-
     analogWrite(MOTOR, 255);
-
     music.setVolume(5);
-
     music.play("song1.wav");
 
     while (keepPlaying){
@@ -148,13 +149,10 @@ void loop(){
   //Song 2
   if (digitalRead(SONG2_PIN) == HIGH){
     bool keepPlaying = true;
-
     analogWrite(MOTOR, 255);
-
     music.setVolume(5);
-
     music.play("song2.wav");
-
+    
     while (keepPlaying){
       keepPlaying = music.isPlaying();
       
@@ -169,11 +167,8 @@ void loop(){
   if (digitalRead(PLAY_RECORDING_PIN) == HIGH){
     //playRecording();
     bool keepPlaying = true;
-
     analogWrite(MOTOR, 255);
-
     music.setVolume(5);
-
     music.play("songR.wav");
 
     while (keepPlaying){
@@ -186,15 +181,12 @@ void loop(){
     }
   }
   
-  //Record Music
+  //Record Music, currently non-functional due to hardware issues
   if (digitalRead(RECORD_PIN) == HIGH){
     //record();
     unsigned long start_record = micros;
-
     music.startRecording("songR.wav",8000,A0);
-
     while(micros() - start_record < 20000000){}
-
     music.stopRecording("songR.wav");
   }
 }
@@ -216,13 +208,11 @@ void playRecording(){
   for(int i = 0; i < numFreq; i++){
     unsigned long start_note = micros(); //
     //Serial.println(rFreq[i]);
-    
     tone(SPEAKER_PIN, rFreq[i]);
     
     if(digitalRead(STOP_PIN) == HIGH){
       return;
     }
-    
     while(micros() - start_note < 71428){} //
   }
 }
@@ -242,10 +232,7 @@ void playRecording(){
 void record(){
   const uint16_t SAMPLES = 256; //Max samples per window is 256
   unsigned long start_samp;
-
-  
   const double SAMP_FREQ = 10000; //Max sampling frequency is 10 kHz on Uno
-
   //Sampling period in micro seconds
   unsigned int SAMP_PERIOD = (1000000*(1.0/SAMP_FREQ));
 
@@ -318,7 +305,7 @@ int freqMap(int value){
   const int size = 69;
   const double accuracy = 0.04;
   
-  //array of piano frequencies
+  //array of piano frequencies, could be improved to reduce memory consumption
   const int piano[size] = {0, 104, 110, 117, 123, 131, 139, 147, 156, 165, 175, 185, 196,
                            208, 220, 233, 247, 262, 277, 294, 311, 330, 349, 370, 392, 415,
                            440, 466, 494, 523, 554, 587, 622, 659, 698, 740, 784, 831, 880,
